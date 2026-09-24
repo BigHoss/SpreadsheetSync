@@ -1,6 +1,5 @@
 import { App, Plugin, MarkdownPostProcessorContext, TFile } from 'obsidian';
 import * as XLSX from 'xlsx';
-import * as path from 'path';
 
 interface SpreadsheetRange {
 	sheet?: string;
@@ -44,11 +43,14 @@ export default class SpreadsheetSyncPlugin extends Plugin {
 		const [_, filename, rangeStr] = match;
 		const range = this.parseRange(rangeStr);
 
-		// Get the full path to the spreadsheet file
+		// Get the full path to the spreadsheet file.
+		// Note: Node's `path` module is unavailable in the Obsidian mobile plugin sandbox,
+		// so resolve relative paths with string ops. Obsidian's `sourcePath` always uses
+		// forward slashes regardless of host OS, so this is safe.
 		const notePath = ctx.sourcePath;
-		const noteDir = path.dirname(notePath);
-		// Convert Windows path separators to forward slashes for Obsidian's vault API
-		const filePath = path.join(noteDir, filename).replace(/\\/g, '/');
+		const lastSlash = notePath.lastIndexOf('/');
+		const noteDir = lastSlash >= 0 ? notePath.substring(0, lastSlash) : '';
+		const filePath = noteDir ? `${noteDir}/${filename}` : filename;
 		
 		console.log('SpreadsheetSync Debug:', {
 			notePath,
