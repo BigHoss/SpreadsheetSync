@@ -7,9 +7,25 @@ interface SpreadsheetRange {
 	endCell: string;
 }
 
+interface RenderOptions {
+	mode: 'stacked' | 'tabbed';
+	formatting: boolean;
+}
+
+interface ParsedSpec {
+	ranges: SpreadsheetRange[];
+	options: RenderOptions;
+}
+
+interface WorksheetHandle {
+	workbook: XLSX.WorkBook;
+	file: TFile;
+	filePath: string;
+	filename: string;
+}
+
 export default class SpreadsheetSyncPlugin extends Plugin {
 	async onload() {
-		// Register the markdown processor for spreadsheet codeblocks
 		this.registerMarkdownCodeBlockProcessor('spreadsheet', async (source, el, ctx) => {
 			try {
 				await this.renderSpreadsheetBlock(source, el, ctx);
@@ -20,80 +36,100 @@ export default class SpreadsheetSyncPlugin extends Plugin {
 	}
 
 	private parseRange(rangeStr: string): SpreadsheetRange {
-		// Match patterns like "Sheet1!A1:B2" or "A1:B2"
 		const match = rangeStr.match(/(?:([^!]+)!)?([A-Z]+\d+):([A-Z]+\d+)/);
 		if (!match) {
 			throw new Error('Invalid range format. Expected format: [SheetName!]A1:B2');
 		}
-
 		return {
-			sheet: match[1],
+			sheet: match[1]?.trim(),
 			startCell: match[2],
-			endCell: match[3]
+			endCell: match[3],
 		};
 	}
 
-	private async renderSpreadsheetBlock(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
-		// Parse the source: filename.xlsx(A1:B2) or filename.xlsx(Sheet1!A1:B2)
-		const match = source.trim().match(/^(.+?)\((.+?)\)$/);
-		if (!match) {
-			throw new Error('Invalid format. Expected: filename.xlsx(A1:B2) or filename.xlsx(Sheet1!A1:B2)');
+	private parseSpec(innerArg: string): ParsedSpec {
+		// Split on first ';' — ranges part + options part.
+		const semiIdx = innerArg.indexOf(';');
+		const rangesPart = (semiIdx >= 0 ? innerArg.substring(0, semiIdx) : innerArg).trim();
+		const optionsPart = (semiIdx >= 0 ? innerArg.substring(semiIdx + 1) : '').trim();
+
+		// Ranges separated by ','.
+		const rangeStrs = rangesPart.split(',').map(s => s.trim()).filter(Boolean);
+		if (rangeStrs.length === 0) {
+			throw new Error('No ranges provided');
+		}
+		const ranges = rangeStrs.map(s => this.parseRange(s));
+
+		// Options: key=value pairs, ',' separated (mirrors the ranges separator).
+		const options: RenderOptions = { mode: 'stacked', formatting: true };
+		if (optionsPart) {
+			for (const opt of optionsPart.split(',').map(s => s.trim()).filter(Boolean)) {
+				const eqIdx = opt.indexOf('=');
+				if (eqIdx < 0) continue;
+				const key = opt.substring(0, eqIdx).trim().toLowerCase();
+				const value = opt.substring(eqIdx + 1).trim().toLowerCase();
+				if (key === 'mode') {
+					if (value === 'tabbed' || value === 'stacked') {
+						options.mode = value;
+					}
+				} else if (key === 'formatting') {
+					options.formatting = value !== 'off';
+				}
+			}
 		}
 
-		const [_, filename, rangeStr] = match;
-		const range = this.parseRange(rangeStr);
+		return { ranges, options };
+	}
 
-		// Get the full path to the spreadsheet file.
-		// Note: Node's `path` module is unavailable in the Obsidian mobile plugin sandbox,
-		// so resolve relative paths with string ops. Obsidian's `sourcePath` always uses
-		// forward slashes regardless of host OS, so this is safe.
+	private async renderSpreadsheetBlock(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
+		const match = source.trim().match(/^(.+?)\((.+?)\)$/);
+		if (!match) {
+			throw new Error('Invalid format. Expected: filename.xlsx(A1:B2) or filename.xlsx(A1:B2,C1:D5; mode=tabbed)');
+		}
+
+		const [_, filename, innerArg] = match;
+		const spec = this.parseSpec(innerArg);
+
+		// Resolve the file path. Obsidian mobile sandbox can't use Node's `path` module,
+		// so resolve with string ops. `sourcePath` always uses forward slashes.
 		const notePath = ctx.sourcePath;
 		const lastSlash = notePath.lastIndexOf('/');
 		const noteDir = lastSlash >= 0 ? notePath.substring(0, lastSlash) : '';
 		const filePath = noteDir ? `${noteDir}/${filename}` : filename;
-		
-		console.log('SpreadsheetSync Debug:', {
-			notePath,
-			noteDir,
-			filename,
-			filePath,
-			exists: this.app.vault.getAbstractFileByPath(filePath) !== null
-		});
 
-		// Read the file using the Obsidian API
 		const abstractFile = this.app.vault.getAbstractFileByPath(filePath);
 		if (!abstractFile || !(abstractFile instanceof TFile)) {
 			throw new Error(`File not found or is not a valid file: ${filename} (looking in ${filePath})`);
 		}
 		const file = abstractFile;
 
-		// Read the file contents
 		const arrayBuffer = await this.app.vault.readBinary(file);
-		const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+		const workbook = XLSX.read(arrayBuffer, { type: 'array', cellStyles: true });
 
-		// Determine which sheet to use
-		const sheetName = range.sheet || workbook.SheetNames[0];
-		const worksheet = workbook.Sheets[sheetName];
-		if (!worksheet) {
-			throw new Error(`Sheet not found: ${sheetName}`);
-		}
+		const handle: WorksheetHandle = { workbook, file, filePath, filename };
 
-		// Get the data from the specified range
-		const rangeData = XLSX.utils.sheet_to_json(worksheet, {
-			header: 1,
-			range: `${range.startCell}:${range.endCell}`
-		}) as any[][];
-
-		// Create the wrapper, toolbar, and scroll container
+		// Outer block
 		const block = el.createEl('div', { cls: 'spreadsheet-block' });
 
-		// Toolbar: filename + sheet + range, with an "Open in Excel" action.
-		const toolbar = block.createEl('div', { cls: 'spreadsheet-toolbar' });
+		// Top toolbar — filename + open-in-excel action (always shown).
+		this.renderTopToolbar(block, handle);
+
+		if (spec.options.mode === 'tabbed') {
+			this.renderTabbedBlock(block, handle, spec.ranges, spec.options);
+		} else {
+			for (const range of spec.ranges) {
+				this.renderSubBlock(block, handle, range, spec.options);
+			}
+		}
+	}
+
+	private renderTopToolbar(parent: HTMLElement, handle: WorksheetHandle) {
+		const toolbar = parent.createEl('div', { cls: 'spreadsheet-toolbar' });
 		const label = toolbar.createEl('span', {
 			cls: 'spreadsheet-label',
-			text: `${filename} · ${sheetName} · ${range.startCell}:${range.endCell}`,
+			text: handle.filename,
 		});
-		label.title = filePath;
+		label.title = handle.filePath;
 
 		const openLink = toolbar.createEl('a', {
 			cls: 'spreadsheet-open',
@@ -105,36 +141,219 @@ export default class SpreadsheetSyncPlugin extends Plugin {
 			const app = this.app as any;
 			try {
 				if (typeof app.openWithDefaultApp === 'function') {
-					await app.openWithDefaultApp(file.path);
+					await app.openWithDefaultApp(handle.file.path);
 				} else if (typeof app.showInFolder === 'function') {
-					// Fallback for older Obsidian: reveal in file tree.
-					app.showInFolder(file.path);
+					app.showInFolder(handle.file.path);
 				} else if (typeof app.revealInFolder === 'function') {
-					app.revealInFolder(file);
+					app.revealInFolder(handle.file);
 				} else {
 					throw new Error('No file-open API available in this Obsidian version');
 				}
 			} catch (err) {
 				console.error('SpreadsheetSync: openWithDefaultApp failed', err);
-				const errDiv = block.createEl('div', {
-					text: `Could not open ${filename}: ${err.message}. File path: ${filePath}`,
+				const errDiv = parent.createEl('div', {
+					text: `Could not open ${handle.filename}: ${err.message}. File path: ${handle.filePath}`,
 					cls: 'spreadsheet-error',
 				});
 				setTimeout(() => errDiv.remove(), 8000);
 			}
 		});
+	}
 
-		// Scroll wrapper: enables horizontal scroll on narrow viewports.
-		const scrollWrap = block.createEl('div', { cls: 'spreadsheet-scroll' });
-		const table = scrollWrap.createEl('table', { cls: 'spreadsheet-table' });
+	private renderSubBlock(
+		parent: HTMLElement,
+		handle: WorksheetHandle,
+		range: SpreadsheetRange,
+		options: RenderOptions,
+	) {
+		const sub = parent.createEl('div', { cls: 'spreadsheet-subblock' });
 
-		// Create table rows
-		rangeData.forEach((row, rowIndex) => {
-			const tr = table.createEl('tr');
-			row.forEach((cell) => {
-				const td = tr.createEl(rowIndex === 0 ? 'th' : 'td');
-				td.textContent = cell?.toString() || '';
-			});
+		// Per-range toolbar — sheet + range label.
+		const subBar = sub.createEl('div', { cls: 'spreadsheet-subtoolbar' });
+		const sheetName = range.sheet || handle.workbook.SheetNames[0];
+		subBar.createEl('span', {
+			cls: 'spreadsheet-label',
+			text: `${sheetName} · ${range.startCell}:${range.endCell}`,
 		});
+
+		// Scroll wrapper.
+		const scroll = sub.createEl('div', { cls: 'spreadsheet-scroll' });
+
+		// Footer with Refresh + Use full range.
+		const footer = sub.createEl('div', { cls: 'spreadsheet-footer' });
+		this.renderFooter(footer, sub, handle, range, options);
+
+		// Table itself.
+		const table = scroll.createEl('table', { cls: 'spreadsheet-table' });
+		const worksheet = handle.workbook.Sheets[sheetName];
+		if (!worksheet) {
+			sub.createEl('div', { text: `Sheet not found: ${sheetName}`, cls: 'spreadsheet-error' });
+			return;
+		}
+		this.renderTable(table, worksheet, range, options.formatting);
+	}
+
+	private renderTabbedBlock(
+		parent: HTMLElement,
+		handle: WorksheetHandle,
+		ranges: SpreadsheetRange[],
+		options: RenderOptions,
+	) {
+		const tabBar = parent.createEl('div', { cls: 'spreadsheet-tabbar' });
+		const subHosts: HTMLElement[] = [];
+		const tabs: HTMLElement[] = [];
+
+		ranges.forEach((range, idx) => {
+			const sheetName = range.sheet || handle.workbook.SheetNames[0];
+			const tabLabel = `${sheetName} · ${range.startCell}:${range.endCell}`;
+
+			const tab = tabBar.createEl('button', {
+				cls: 'spreadsheet-tab',
+				text: tabLabel,
+				attr: { type: 'button' },
+			});
+			if (idx === 0) tab.addClass('spreadsheet-tab-active');
+			tabs.push(tab);
+
+			const sub = parent.createEl('div', { cls: 'spreadsheet-subblock spreadsheet-tab-panel' });
+			if (idx > 0) sub.style.display = 'none';
+			subHosts.push(sub);
+
+			tab.addEventListener('click', () => {
+				subHosts.forEach((s, i) => {
+					s.style.display = i === idx ? '' : 'none';
+					tabs[i].removeClass('spreadsheet-tab-active');
+				});
+				tab.addClass('spreadsheet-tab-active');
+			});
+
+			// Sub-toolbar
+			const subBar = sub.createEl('div', { cls: 'spreadsheet-subtoolbar' });
+			subBar.createEl('span', { cls: 'spreadsheet-label', text: tabLabel });
+
+			// Scroll wrapper
+			const scroll = sub.createEl('div', { cls: 'spreadsheet-scroll' });
+
+			// Footer
+			const footer = sub.createEl('div', { cls: 'spreadsheet-footer' });
+			this.renderFooter(footer, sub, handle, range, options);
+
+			// Table
+			const table = scroll.createEl('table', { cls: 'spreadsheet-table' });
+			const worksheet = handle.workbook.Sheets[sheetName];
+			if (!worksheet) {
+				sub.createEl('div', { text: `Sheet not found: ${sheetName}`, cls: 'spreadsheet-error' });
+				return;
+			}
+			this.renderTable(table, worksheet, range, options.formatting);
+		});
+	}
+
+	private renderFooter(
+		footer: HTMLElement,
+		sub: HTMLElement,
+		handle: WorksheetHandle,
+		range: SpreadsheetRange,
+		options: RenderOptions,
+	) {
+		footer.createEl('span', {
+			cls: 'spreadsheet-label',
+			text: `Range ${range.startCell}:${range.endCell}`,
+		});
+
+		const refreshBtn = footer.createEl('a', { text: 'Refresh', href: '#' });
+		refreshBtn.addEventListener('click', async (evt) => {
+			evt.preventDefault();
+			await this.refreshSubBlock(sub, handle, range, options);
+		});
+
+		const fullBtn = footer.createEl('a', { text: 'Use full range', href: '#' });
+		fullBtn.addEventListener('click', async (evt) => {
+			evt.preventDefault();
+			const sheetName = range.sheet || handle.workbook.SheetNames[0];
+			const worksheet = handle.workbook.Sheets[sheetName];
+			if (!worksheet || !worksheet['!ref']) return;
+			const ref = XLSX.utils.decode_range(worksheet['!ref']);
+			const fullRange: SpreadsheetRange = {
+				sheet: range.sheet,
+				startCell: XLSX.utils.encode_cell({ r: ref.s.r, c: ref.s.c }),
+				endCell: XLSX.utils.encode_cell({ r: ref.e.r, c: ref.e.c }),
+			};
+			await this.refreshSubBlock(sub, handle, fullRange, options);
+		});
+	}
+
+	private async refreshSubBlock(
+		sub: HTMLElement,
+		handle: WorksheetHandle,
+		range: SpreadsheetRange,
+		options: RenderOptions,
+	) {
+		// Re-read the file (may have changed on disk) and replace just the table.
+		const arrayBuffer = await this.app.vault.readBinary(handle.file);
+		const workbook = XLSX.read(arrayBuffer, { type: 'array', cellStyles: true });
+		handle.workbook = workbook;
+
+		const sheetName = range.sheet || workbook.SheetNames[0];
+		const worksheet = workbook.Sheets[sheetName];
+		if (!worksheet) {
+			sub.createEl('div', { text: `Sheet not found: ${sheetName}`, cls: 'spreadsheet-error' });
+			return;
+		}
+
+		// Update the sub-toolbar label.
+		const subBar = sub.querySelector('.spreadsheet-subtoolbar .spreadsheet-label');
+		if (subBar) subBar.textContent = `${sheetName} · ${range.startCell}:${range.endCell}`;
+
+		// Update the footer label.
+		const footerLabel = sub.querySelector('.spreadsheet-footer .spreadsheet-label');
+		if (footerLabel) footerLabel.textContent = `Range ${range.startCell}:${range.endCell}`;
+
+		// Replace the table.
+		const oldScroll = sub.querySelector('.spreadsheet-scroll');
+		if (oldScroll) oldScroll.empty();
+		const scroll = oldScroll || sub.createEl('div', { cls: 'spreadsheet-scroll' });
+		const table = scroll.createEl('table', { cls: 'spreadsheet-table' });
+		this.renderTable(table, worksheet, range, options.formatting);
+	}
+
+	private renderTable(
+		table: HTMLElement,
+		worksheet: XLSX.WorkSheet,
+		range: SpreadsheetRange,
+		formattingOn: boolean,
+	) {
+		const rangeInfo = XLSX.utils.decode_range(`${range.startCell}:${range.endCell}`);
+		const headerRow = rangeInfo.s.r;
+
+		for (let r = rangeInfo.s.r; r <= rangeInfo.e.r; r++) {
+			const tr = table.createEl('tr');
+			const isHeader = r === headerRow;
+			for (let c = rangeInfo.s.c; c <= rangeInfo.e.c; c++) {
+				const cellRef = XLSX.utils.encode_cell({ r, c });
+				const cell = worksheet[cellRef];
+				const td = tr.createEl(isHeader ? 'th' : 'td');
+				if (cell?.v != null) {
+					td.textContent = String(cell.v);
+				}
+				if (formattingOn && cell?.s) {
+					this.applyCellStyle(td, cell.s);
+				}
+			}
+		}
+	}
+
+	private applyCellStyle(td: HTMLElement, style: any) {
+		const fillRgb = style?.fill?.fgColor?.rgb;
+		if (fillRgb && typeof fillRgb === 'string') {
+			// SheetJS may give 8-char ARGB; CSS wants 6-char RGB with a leading '#'.
+			td.style.backgroundColor = '#' + fillRgb.slice(-6);
+		}
+		const fontRgb = style?.font?.color?.rgb;
+		if (fontRgb && typeof fontRgb === 'string') {
+			td.style.color = '#' + fontRgb.slice(-6);
+		}
+		if (style?.font?.bold) td.style.fontWeight = 'bold';
+		if (style?.font?.italic) td.style.fontStyle = 'italic';
 	}
 }
