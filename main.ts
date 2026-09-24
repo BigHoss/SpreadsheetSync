@@ -110,13 +110,14 @@ export default class SpreadsheetSyncPlugin extends Plugin {
 
 		// Outer block
 		const block = el.createEl('div', { cls: 'spreadsheet-block' });
-		// Body wrapper — contains all sub-blocks. Cleared and re-rendered by
-		// the "Load all sheets" button so we can swap content without losing
-		// the outer toolbar (and its Open-in-Excel handler).
-		const body = block.createEl('div', { cls: 'spreadsheet-body' });
 
-		// Top toolbar — filename + open-in-excel action (always shown).
-		this.renderTopToolbar(block, handle, body);
+		// Top toolbar first — must be created before the body so it renders
+		// at the top of the block (DOM order = visual order).
+		this.renderTopToolbar(block, handle);
+
+		// Body container — cleared and re-rendered by the "Load all sheets"
+		// button so we can swap content without losing the outer toolbar.
+		const body = block.createEl('div', { cls: 'spreadsheet-body' });
 
 		if (spec.options.mode === 'tabbed') {
 			this.renderTabbedBlock(body, handle, spec.ranges, spec.options);
@@ -127,7 +128,7 @@ export default class SpreadsheetSyncPlugin extends Plugin {
 		}
 	}
 
-	private renderTopToolbar(parent: HTMLElement, handle: WorksheetHandle, body: HTMLElement) {
+	private renderTopToolbar(parent: HTMLElement, handle: WorksheetHandle) {
 		const toolbar = parent.createEl('div', { cls: 'spreadsheet-toolbar' });
 		const label = toolbar.createEl('span', {
 			cls: 'spreadsheet-label',
@@ -137,18 +138,19 @@ export default class SpreadsheetSyncPlugin extends Plugin {
 
 		const actions = toolbar.createEl('span', { cls: 'spreadsheet-actions' });
 
-		// Load-all-sheets action — hidden when the workbook only has one sheet.
-		if (handle.workbook.SheetNames.length > 1) {
-			const loadAllLink = actions.createEl('a', {
-				cls: 'spreadsheet-load-all',
-				text: 'Load all sheets',
-				href: '#',
-			});
-			loadAllLink.addEventListener('click', async (evt) => {
-				evt.preventDefault();
-				await this.loadAllSheets(body, handle);
-			});
-		}
+		// Always show — even for single-sheet workbooks the action is still
+		// useful as "re-read file and re-render", and showing it consistently
+		// avoids the surprise of it appearing/disappearing as sheets change.
+		const loadAllLink = actions.createEl('a', {
+			cls: 'spreadsheet-load-all',
+			text: 'Load all sheets',
+			href: '#',
+		});
+		loadAllLink.addEventListener('click', async (evt) => {
+			evt.preventDefault();
+			const body = parent.querySelector('.spreadsheet-body') as HTMLElement | null;
+			if (body) await this.loadAllSheets(body, handle);
+		});
 
 		const openLink = actions.createEl('a', {
 			cls: 'spreadsheet-open',
