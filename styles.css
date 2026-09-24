@@ -1,9 +1,7 @@
 /*
 
 This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
+available in the app when the plugin is enabled.
 
 */
 
@@ -14,7 +12,8 @@ If your plugin does not need CSS, delete this file.
     overflow: hidden;
 }
 
-.spreadsheet-toolbar {
+.spreadsheet-toolbar,
+.spreadsheet-subtoolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -23,6 +22,11 @@ If your plugin does not need CSS, delete this file.
     background-color: var(--background-secondary);
     border-bottom: 1px solid var(--background-modifier-border);
     font-size: 0.85em;
+}
+
+.spreadsheet-subtoolbar {
+    background-color: var(--background-modifier-border-hover);
+    border-top: 1px solid var(--background-modifier-border);
 }
 
 .spreadsheet-label {
@@ -45,6 +49,44 @@ If your plugin does not need CSS, delete this file.
     text-decoration: underline;
 }
 
+.spreadsheet-tabbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 4px 4px 0 4px;
+    background-color: var(--background-secondary);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.spreadsheet-tab {
+    appearance: none;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    padding: 4px 10px;
+    font-size: 0.85em;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.spreadsheet-tab-active {
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-weight: 600;
+    border-bottom: 1px solid var(--background-primary);
+    position: relative;
+    top: 1px;
+}
+
+.spreadsheet-tab-panel {
+    /* no extra styles — display toggled by inline style */
+}
+
+.spreadsheet-subblock {
+    /* base; per-tab variants applied inline */
+}
+
 .spreadsheet-scroll {
     overflow-x: auto;
     max-width: 100%;
@@ -52,7 +94,8 @@ If your plugin does not need CSS, delete this file.
 }
 
 .spreadsheet-table {
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     margin: 0;
     width: auto;
     min-width: max-content;
@@ -65,13 +108,43 @@ If your plugin does not need CSS, delete this file.
     white-space: nowrap;
 }
 
-.spreadsheet-table th {
+/* Sticky header — stays visible when the page scrolls past the table. */
+.spreadsheet-table tr:first-child th {
+    position: sticky;
+    top: 0;
     background-color: var(--background-modifier-hover);
+    z-index: 1;
+}
+
+.spreadsheet-table th {
     font-weight: bold;
 }
 
-.spreadsheet-table tr:nth-child(2n) {
+.spreadsheet-table tr:nth-child(2n) td {
     background-color: var(--background-secondary);
+}
+
+.spreadsheet-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 12px;
+    background-color: var(--background-secondary);
+    border-top: 1px solid var(--background-modifier-border);
+    font-size: 0.85em;
+}
+
+.spreadsheet-footer a {
+    color: var(--text-accent);
+    text-decoration: none;
+    cursor: pointer;
+    margin-left: 12px;
+    flex: 0 0 auto;
+}
+
+.spreadsheet-footer a:hover {
+    text-decoration: underline;
 }
 
 .spreadsheet-error {
