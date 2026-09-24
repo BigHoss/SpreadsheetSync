@@ -110,20 +110,24 @@ export default class SpreadsheetSyncPlugin extends Plugin {
 
 		// Outer block
 		const block = el.createEl('div', { cls: 'spreadsheet-block' });
+		// Body wrapper — contains all sub-blocks. Cleared and re-rendered by
+		// the "Load all sheets" button so we can swap content without losing
+		// the outer toolbar (and its Open-in-Excel handler).
+		const body = block.createEl('div', { cls: 'spreadsheet-body' });
 
 		// Top toolbar — filename + open-in-excel action (always shown).
-		this.renderTopToolbar(block, handle);
+		this.renderTopToolbar(block, handle, body);
 
 		if (spec.options.mode === 'tabbed') {
-			this.renderTabbedBlock(block, handle, spec.ranges, spec.options);
+			this.renderTabbedBlock(body, handle, spec.ranges, spec.options);
 		} else {
 			for (const range of spec.ranges) {
-				this.renderSubBlock(block, handle, range, spec.options);
+				this.renderSubBlock(body, handle, range, spec.options);
 			}
 		}
 	}
 
-	private renderTopToolbar(parent: HTMLElement, handle: WorksheetHandle) {
+	private renderTopToolbar(parent: HTMLElement, handle: WorksheetHandle, body: HTMLElement) {
 		const toolbar = parent.createEl('div', { cls: 'spreadsheet-toolbar' });
 		const label = toolbar.createEl('span', {
 			cls: 'spreadsheet-label',
@@ -131,7 +135,22 @@ export default class SpreadsheetSyncPlugin extends Plugin {
 		});
 		label.title = handle.filePath;
 
-		const openLink = toolbar.createEl('a', {
+		const actions = toolbar.createEl('span', { cls: 'spreadsheet-actions' });
+
+		// Load-all-sheets action — hidden when the workbook only has one sheet.
+		if (handle.workbook.SheetNames.length > 1) {
+			const loadAllLink = actions.createEl('a', {
+				cls: 'spreadsheet-load-all',
+				text: 'Load all sheets',
+				href: '#',
+			});
+			loadAllLink.addEventListener('click', async (evt) => {
+				evt.preventDefault();
+				await this.loadAllSheets(body, handle);
+			});
+		}
+
+		const openLink = actions.createEl('a', {
 			cls: 'spreadsheet-open',
 			text: 'Open in Excel',
 			href: '#',
@@ -158,6 +177,36 @@ export default class SpreadsheetSyncPlugin extends Plugin {
 				setTimeout(() => errDiv.remove(), 8000);
 			}
 		});
+	}
+
+	private async loadAllSheets(body: HTMLElement, handle: WorksheetHandle) {
+		// Re-read the file so newly-added sheets show up.
+		const arrayBuffer = await this.app.vault.readBinary(handle.file);
+		const workbook = XLSX.read(arrayBuffer, { type: 'array', cellStyles: true });
+		handle.workbook = workbook;
+
+		body.empty();
+		const options: RenderOptions = { mode: 'stacked', formatting: true };
+		let rendered = 0;
+		for (const sheetName of workbook.SheetNames) {
+			const worksheet = workbook.Sheets[sheetName];
+			if (!worksheet || !worksheet['!ref']) continue; // skip empty / hidden
+			const ref = XLSX.utils.decode_range(worksheet['!ref']);
+			if (ref.e.r < ref.s.r || ref.e.c < ref.s.c) continue; // skip empty ranges
+			const range: SpreadsheetRange = {
+				sheet: sheetName,
+				startCell: XLSX.utils.encode_cell({ r: ref.s.r, c: ref.s.c }),
+				endCell: XLSX.utils.encode_cell({ r: ref.e.r, c: ref.e.c }),
+			};
+			this.renderSubBlock(body, handle, range, options);
+			rendered++;
+		}
+		if (rendered === 0) {
+			body.createEl('div', {
+				text: 'No sheets with data found in this workbook.',
+				cls: 'spreadsheet-error',
+			});
+		}
 	}
 
 	private renderSubBlock(

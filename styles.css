@@ -50,6 +50,25 @@ available in the app when the plugin is enabled.
     text-decoration: underline;
 }
 
+.spreadsheet-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    flex: 0 0 auto;
+}
+
+.spreadsheet-load-all {
+    color: var(--text-muted);
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.spreadsheet-load-all:hover {
+    color: var(--text-accent);
+    text-decoration: underline;
+}
+
 .spreadsheet-tabbar {
     display: flex;
     flex-wrap: wrap;
