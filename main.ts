@@ -84,9 +84,50 @@ export default class SpreadsheetSyncPlugin extends Plugin {
 			range: `${range.startCell}:${range.endCell}`
 		}) as any[][];
 
-		// Create the table
-		const table = el.createEl('table', { cls: 'spreadsheet-table' });
-		
+		// Create the wrapper, toolbar, and scroll container
+		const block = el.createEl('div', { cls: 'spreadsheet-block' });
+
+		// Toolbar: filename + sheet + range, with an "Open in Excel" action.
+		const toolbar = block.createEl('div', { cls: 'spreadsheet-toolbar' });
+		const label = toolbar.createEl('span', {
+			cls: 'spreadsheet-label',
+			text: `${filename} · ${sheetName} · ${range.startCell}:${range.endCell}`,
+		});
+		label.title = filePath;
+
+		const openLink = toolbar.createEl('a', {
+			cls: 'spreadsheet-open',
+			text: 'Open in Excel',
+			href: '#',
+		});
+		openLink.addEventListener('click', async (evt) => {
+			evt.preventDefault();
+			const app = this.app as any;
+			try {
+				if (typeof app.openWithDefaultApp === 'function') {
+					await app.openWithDefaultApp(file.path);
+				} else if (typeof app.showInFolder === 'function') {
+					// Fallback for older Obsidian: reveal in file tree.
+					app.showInFolder(file.path);
+				} else if (typeof app.revealInFolder === 'function') {
+					app.revealInFolder(file);
+				} else {
+					throw new Error('No file-open API available in this Obsidian version');
+				}
+			} catch (err) {
+				console.error('SpreadsheetSync: openWithDefaultApp failed', err);
+				const errDiv = block.createEl('div', {
+					text: `Could not open ${filename}: ${err.message}. File path: ${filePath}`,
+					cls: 'spreadsheet-error',
+				});
+				setTimeout(() => errDiv.remove(), 8000);
+			}
+		});
+
+		// Scroll wrapper: enables horizontal scroll on narrow viewports.
+		const scrollWrap = block.createEl('div', { cls: 'spreadsheet-scroll' });
+		const table = scrollWrap.createEl('table', { cls: 'spreadsheet-table' });
+
 		// Create table rows
 		rangeData.forEach((row, rowIndex) => {
 			const tr = table.createEl('tr');
