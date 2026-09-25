@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>XLSX Block — basic</title>
+<style>
+:root {
+    color-scheme: dark;
+    --background-primary: #1e1e1e;
+    --background-secondary: #252525;
+    --background-modifier-hover: #2a2a2a;
+    --background-modifier-border: #333;
+    --text-normal: #dcddde;
+    --text-muted: #999;
+    --text-accent: #7cb9e8;
+    --background-modifier-error: #5a1f1f;
+    --background-modifier-error-hover: #6e2626;
+    --background-modifier-border-hover: #2d2d2d;
+}
+body {
+    margin: 0;
+    padding: 24px;
+    background: #181818;
+    color: var(--text-normal);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+}
+.note { max-width: 920px; }
+.spreadsheet-block {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    margin: 1em 0;
+}
+.spreadsheet-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 12px;
+    background-color: var(--background-secondary);
+    border-bottom: 1px solid var(--background-modifier-border);
+    font-size: 0.85em;
+}
+.spreadsheet-label {
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.spreadsheet-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    flex: 0 0 auto;
+}
+.spreadsheet-open, .spreadsheet-load-all {
+    text-decoration: none;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+.spreadsheet-open { color: var(--text-accent); }
+.spreadsheet-open:hover { text-decoration: underline; }
+.spreadsheet-load-all { color: var(--text-muted); font-size: 0.9em; }
+.spreadsheet-load-all:hover { color: var(--text-accent); text-decoration: underline; }
+.spreadsheet-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.spreadsheet-table {
+    border-collapse: collapse;
+    margin: 0;
+    width: 100%;
+}
+.spreadsheet-table th, .spreadsheet-table td {
+    border: 1px solid var(--background-modifier-border);
+    padding: 6px 13px;
+    white-space: nowrap;
+}
+.spreadsheet-table th {
+    position: sticky;
+    top: 0;
+    background-color: var(--background-modifier-hover);
+    z-index: 1;
+    font-weight: bold;
+}
+.spreadsheet-table tr:nth-child(2n) td {
+    background-color: var(--background-secondary);
+}
+.spreadsheet-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 12px;
+    background-color: var(--background-secondary);
+    border-top: 1px solid var(--background-modifier-border);
+    font-size: 0.85em;
+}
+.spreadsheet-footer a {
+    color: var(--text-accent);
+    text-decoration: none;
+    cursor: pointer;
+    margin-left: 12px;
+    flex: 0 0 auto;
+}
+.spreadsheet-footer a:hover { text-decoration: underline; }
+.status-active { color: #6abf69; font-weight: 600; }
+.status-open { color: #e0c989; }
+h3 { color: var(--text-normal); font-size: 14px; margin: 0 0 8px 0; font-weight: 600; }
+pre { background: var(--background-secondary); padding: 8px; border-radius: 4px; font-size: 12px; overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="note">
+<h3>My projects</h3>
+<pre>```spreadsheet
+Aktuelle Projekte v0.1.xlsx(Projekte!A1:E13)
+```</pre>
+
+<div class="spreadsheet-block">
+    <div class="spreadsheet-toolbar">
+        <span class="spreadsheet-label" title="1. Projects/.../Aktuelle Projekte v0.1.xlsx">Aktuelle Projekte v0.1.xlsx</span>
+        <span class="spreadsheet-actions">
+            <a class="spreadsheet-load-all">Load all sheets</a>
+            <a class="spreadsheet-open">Open in Excel</a>
+        </span>
+    </div>
+    <div class="spreadsheet-scroll">
+        <table class="spreadsheet-table">
+            <thead>
+                <tr><th>Priority</th><th>Project</th><th>Sub-detail / note</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>1</td><td>container-telegram-bot</td><td></td><td class="status-open">open</td></tr>
+                <tr><td>2</td><td>Homelab Manager</td><td>mb replaced with mycelium</td><td class="status-open">open</td></tr>
+                <tr><td>3</td><td>Ebook Reader</td><td></td><td class="status-open">open</td></tr>
+                <tr><td>4</td><td>Messer-Schmied.cv</td><td>https://messer-schmied.ch</td><td class="status-active">active</td></tr>
+                <tr><td>5</td><td>TD-Launcher</td><td>FM module</td><td class="status-open">open</td></tr>
+                <tr><td>6</td><td>mempalace-bridge</td><td>unicorn & konzept</td><td class="status-open">open</td></tr>
+                <tr><td>7</td><td>nager.date</td><td>ics</td><td class="status-open">open</td></tr>
+                <tr><td>8</td><td>soundiiz</td><td>spotify -> navidrome</td><td class="status-open">open</td></tr>
+                <tr><td>9</td><td>golf</td><td>rear int (interior) lights & glasses box</td><td class="status-open">open</td></tr>
+                <tr><td>10</td><td>Van Plan</td><td>Premium Plan Stream</td><td class="status-open">open</td></tr>
+                <tr><td>11</td><td>Van Plan v0.2</td><td>cheapo</td><td class="status-open">open</td></tr>
+                <tr><td>12</td><td>CmdPal</td><td>FFM extension</td><td class="status-open">open</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="spreadsheet-footer">
+        <span class="spreadsheet-label">Range A1:E13</span>
+        <span>
+            <a>Refresh</a>
+            <a>Use full range</a>
+        </span>
+    </div>
+</div>
+</div>
+</body>
+</html>

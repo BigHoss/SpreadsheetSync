@@ -1,16 +1,20 @@
 {
-	"name": "obsidian-spreadsheet-sync",
-	"version": "1.0.0",
-	"description": "Display spreadsheet data in Obsidian notes",
+	"name": "obsidian-xlsx-block",
+	"version": "2.0.0",
+	"description": "Embed live xlsx/csv tables in your Obsidian notes. Multi-range, cell formatting, sticky header, refresh & open-in-Excel.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
-	"keywords": ["obsidian", "spreadsheet", "excel", "csv"],
-	"author": "",
+	"keywords": ["obsidian", "spreadsheet", "excel", "xlsx", "csv", "table"],
+	"author": "Raphael",
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/BigHoss/obsidian-xlsx-block"
+	},
 	"devDependencies": {
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "5.29.0",

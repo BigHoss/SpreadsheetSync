@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>XLSX Block — multi-range stacked</title>
+<style>
+:root {
+    color-scheme: dark;
+    --background-primary: #1e1e1e;
+    --background-secondary: #252525;
+    --background-modifier-hover: #2a2a2a;
+    --background-modifier-border: #333;
+    --text-normal: #dcddde;
+    --text-muted: #999;
+    --text-accent: #7cb9e8;
+    --background-modifier-border-hover: #2d2d2d;
+}
+body { margin: 0; padding: 24px; background: #181818; color: var(--text-normal); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; }
+.note { max-width: 920px; }
+pre { background: var(--background-secondary); padding: 8px; border-radius: 4px; font-size: 12px; overflow-x: auto; }
+.spreadsheet-block { border: 1px solid var(--background-modifier-border); border-radius: 4px; margin: 1em 0; }
+.spreadsheet-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 12px; background-color: var(--background-secondary); border-bottom: 1px solid var(--background-modifier-border); font-size: 0.85em; }
+.spreadsheet-label { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 auto; }
+.spreadsheet-actions { display: inline-flex; align-items: center; gap: 14px; flex: 0 0 auto; }
+.spreadsheet-open { color: var(--text-accent); text-decoration: none; cursor: pointer; }
+.spreadsheet-load-all { color: var(--text-muted); text-decoration: none; cursor: pointer; font-size: 0.9em; }
+.spreadsheet-subtoolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 12px; background-color: var(--background-modifier-border-hover); border-top: 1px solid var(--background-modifier-border); font-size: 0.85em; }
+.spreadsheet-scroll { overflow-x: auto; }
+.spreadsheet-table { border-collapse: collapse; margin: 0; width: 100%; }
+.spreadsheet-table th, .spreadsheet-table td { border: 1px solid var(--background-modifier-border); padding: 6px 13px; white-space: nowrap; }
+.spreadsheet-table th { position: sticky; top: 0; background-color: var(--background-modifier-hover); z-index: 1; font-weight: bold; }
+.spreadsheet-table tr:nth-child(2n) td { background-color: var(--background-secondary); }
+.spreadsheet-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 12px; background-color: var(--background-secondary); border-top: 1px solid var(--background-modifier-border); font-size: 0.85em; }
+.spreadsheet-footer a { color: var(--text-accent); text-decoration: none; cursor: pointer; margin-left: 12px; }
+h3 { color: var(--text-normal); font-size: 14px; margin: 0 0 8px 0; font-weight: 600; }
+.status-active { color: #6abf69; font-weight: 600; }
+.status-open { color: #e0c989; }
+</style>
+</head>
+<body>
+<div class="note">
+<h3>Roadmap view</h3>
+<pre>```spreadsheet
+Budget Q3.xlsx(Roadmap!A1:D12; Risks!A1:C8)
+```</pre>
+
+<div class="spreadsheet-block">
+    <div class="spreadsheet-toolbar">
+        <span class="spreadsheet-label">Budget Q3.xlsx</span>
+        <span class="spreadsheet-actions">
+            <a class="spreadsheet-load-all">Load all sheets</a>
+            <a class="spreadsheet-open">Open in Excel</a>
+        </span>
+    </div>
+
+    <div class="spreadsheet-subblock">
+        <div class="spreadsheet-subtoolbar">
+            <span class="spreadsheet-label">Roadmap · A1:D12</span>
+        </div>
+        <div class="spreadsheet-scroll">
+            <table class="spreadsheet-table">
+                <thead><tr><th>Week</th><th>Milestone</th><th>Owner</th><th>Status</th></tr></thead>
+                <tbody>
+                    <tr><td>W27</td><td>Kickoff sync</td><td>Raphael</td><td class="status-active">done</td></tr>
+                    <tr><td>W28</td><td>Schema lock</td><td>Mira</td><td class="status-active">done</td></tr>
+                    <tr><td>W29</td><td>Backend MVP</td><td>Theo</td><td class="status-open">in flight</td></tr>
+                    <tr><td>W30</td><td>Auth flow</td><td>Lena</td><td class="status-open">in flight</td></tr>
+                    <tr><td>W31</td><td>Beta cohort</td><td>Raphael</td><td class="status-open">queued</td></tr>
+                    <tr><td>W32</td><td>Hardening</td><td>Theo</td><td class="status-open">queued</td></tr>
+                    <tr><td>W33</td><td>Launch</td><td>Raphael</td><td class="status-open">queued</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="spreadsheet-footer">
+            <span class="spreadsheet-label">Range A1:D12</span>
+            <span><a>Refresh</a><a>Use full range</a></span>
+        </div>
+    </div>
+
+    <div class="spreadsheet-subblock">
+        <div class="spreadsheet-subtoolbar">
+            <span class="spreadsheet-label">Risks · A1:C8</span>
+        </div>
+        <div class="spreadsheet-scroll">
+            <table class="spreadsheet-table">
+                <thead><tr><th>Risk</th><th>Severity</th><th>Mitigation</th></tr></thead>
+                <tbody>
+                    <tr><td>Auth vendor outage</td><td style="color:#e06c75;font-weight:600">High</td><td>Local fallback + cache</td></tr>
+                    <tr><td>DB migration window</td><td style="color:#e0c989">Medium</td><td>Blue/green deploy</td></tr>
+                    <tr><td>iOS sync delay</td><td style="color:#e0c989">Medium</td><td>Force sync toggle</td></tr>
+                    <tr><td>On-call burnout</td><td style="color:#e06c75;font-weight:600">High</td><td>Rotation + pager triage</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="spreadsheet-footer">
+            <span class="spreadsheet-label">Range A1:C8</span>
+            <span><a>Refresh</a><a>Use full range</a></span>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

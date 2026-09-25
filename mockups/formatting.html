@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>XLSX Block — cell formatting</title>
+<style>
+:root {
+    color-scheme: dark;
+    --background-primary: #1e1e1e;
+    --background-secondary: #252525;
+    --background-modifier-hover: #2a2a2a;
+    --background-modifier-border: #333;
+    --text-normal: #dcddde;
+    --text-muted: #999;
+    --text-accent: #7cb9e8;
+}
+body { margin: 0; padding: 24px; background: #181818; color: var(--text-normal); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; }
+.note { max-width: 920px; }
+pre { background: var(--background-secondary); padding: 8px; border-radius: 4px; font-size: 12px; overflow-x: auto; }
+.spreadsheet-block { border: 1px solid var(--background-modifier-border); border-radius: 4px; margin: 1em 0; }
+.spreadsheet-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 12px; background-color: var(--background-secondary); border-bottom: 1px solid var(--background-modifier-border); font-size: 0.85em; }
+.spreadsheet-label { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 auto; }
+.spreadsheet-actions { display: inline-flex; align-items: center; gap: 14px; flex: 0 0 auto; }
+.spreadsheet-open { color: var(--text-accent); text-decoration: none; cursor: pointer; }
+.spreadsheet-load-all { color: var(--text-muted); text-decoration: none; cursor: pointer; font-size: 0.9em; }
+.spreadsheet-subtoolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 12px; background-color: var(--background-modifier-border-hover); border-top: 1px solid var(--background-modifier-border); font-size: 0.85em; }
+.spreadsheet-scroll { overflow-x: auto; }
+.spreadsheet-table { border-collapse: collapse; margin: 0; width: 100%; }
+.spreadsheet-table th, .spreadsheet-table td { border: 1px solid var(--background-modifier-border); padding: 6px 13px; white-space: nowrap; }
+.spreadsheet-table th { position: sticky; top: 0; background-color: var(--background-modifier-hover); z-index: 1; font-weight: bold; }
+.spreadsheet-table tr:nth-child(2n) td { background-color: var(--background-secondary); }
+.spreadsheet-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 12px; background-color: var(--background-secondary); border-top: 1px solid var(--background-modifier-border); font-size: 0.85em; }
+.spreadsheet-footer a { color: var(--text-accent); text-decoration: none; cursor: pointer; margin-left: 12px; }
+h3 { color: var(--text-normal); font-size: 14px; margin: 0 0 8px 0; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="note">
+<h3>Sprint board with cell formatting</h3>
+<pre>```spreadsheet
+Sprint 14.xlsx(Board!A1:E10)
+```</pre>
+
+<div class="spreadsheet-block">
+    <div class="spreadsheet-toolbar">
+        <span class="spreadsheet-label">Sprint 14.xlsx</span>
+        <span class="spreadsheet-actions">
+            <a class="spreadsheet-load-all">Load all sheets</a>
+            <a class="spreadsheet-open">Open in Excel</a>
+        </span>
+    </div>
+    <div class="spreadsheet-subblock">
+        <div class="spreadsheet-subtoolbar">
+            <span class="spreadsheet-label">Board · A1:E10</span>
+        </div>
+        <div class="spreadsheet-scroll">
+            <table class="spreadsheet-table">
+                <thead>
+                    <tr>
+                        <th style="background-color:#2d4a2d">Ticket</th>
+                        <th style="background-color:#2d4a2d">Title</th>
+                        <th style="background-color:#2d4a2d">Owner</th>
+                        <th style="background-color:#2d4a2d">Status</th>
+                        <th style="background-color:#2d4a2d">Priority</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="background-color:#1f3a5f;color:#7cb9e8;font-weight:bold">PROJ-401</td>
+                        <td>Add iOS sync fallback</td>
+                        <td>Mira</td>
+                        <td style="background-color:#3d2d2d;color:#e06c75">blocked</td>
+                        <td style="background-color:#3d2d2d;color:#e06c75;font-weight:bold">P1</td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#1f3a5f;color:#7cb9e8;font-weight:bold">PROJ-402</td>
+                        <td>Refactor auth middleware</td>
+                        <td>Theo</td>
+                        <td style="background-color:#2d3d2d;color:#6abf69">in review</td>
+                        <td style="background-color:#2d3d1f;color:#6abf69">P3</td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#1f3a5f;color:#7cb9e8;font-weight:bold">PROJ-403</td>
+                        <td>Migrate invoices to v2 schema</td>
+                        <td>Lena</td>
+                        <td style="background-color:#3d3a2d;color:#e0c989">in flight</td>
+                        <td style="background-color:#3d3a2d;color:#e0c989">P2</td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#1f3a5f;color:#7cb9e8;font-weight:bold">PROJ-404</td>
+                        <td>Update docs for v2</td>
+                        <td>Raphael</td>
+                        <td style="background-color:#3d3a2d;color:#e0c989">in flight</td>
+                        <td style="background-color:#2d3d1f;color:#6abf69">P3</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="spreadsheet-footer">
+            <span class="spreadsheet-label">Range A1:E10</span>
+            <span><a>Refresh</a><a>Use full range</a></span>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>
